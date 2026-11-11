@@ -1,4 +1,4 @@
-# Excel Q&A Agent (local LLM, pandas, no cloud)
+# Q&A Agent (local LLM, pandas, no cloud)
 
 A small agent that answers natural-language questions about data in an Excel file. It
 reads the sheet, asks a **local LLM** (qwen2.5-coder:3b) to write pandas code, checks the code for
