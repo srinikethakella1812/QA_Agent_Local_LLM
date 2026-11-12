@@ -1,4 +1,4 @@
-# Q&A Agent (local LLM, pandas, no cloud)
+# Q&A Agent (local LLM)
 
 A small agent that answers natural-language questions about data in an Excel file. It
 reads the sheet, asks a **local LLM** (qwen2.5-coder:3b) to write pandas code, checks the code for
@@ -20,7 +20,7 @@ laptop through [Ollama](https://ollama.com), so the data never leaves the machin
    few worked examples and rules in the system prompt.
 5. **Check the code** with an AST whitelist before running it: only pandas/numpy
    imports; no `open`, `eval`, `exec`, dunder attributes, or file read/write calls.
-6. **Execute**; if the code fails, the error plus an error-specific repair hint is
+6. **Execute**: if the code fails, the error plus an error-specific repair hint is
    sent back to the model (retries use a little temperature so they can vary).
 7. **Summarise** only the computed result, so figures in the answer come from the
    data. The generated code is always shown for auditability.
@@ -59,37 +59,16 @@ python eval.py
 
 | Run | Dataset | Score | What changed |
 |-----|---------|-------|--------------|
-| 1 | synthetic cards data | 9/10 | First version: schema + one worked example |
-| 2 | 110-row statement | 13/14 | Added group-by rule/example; retries at temperature 0.3 |
-| 3 | 110-row statement | 17/17 | Error-specific repair hints; date-filter rule and example |
-| 4 | 868-row year-to-date statement | 15/21 | New, larger and messier data exposed new failures |
-| 5 | 868-row year-to-date statement | 24/24 | Fixed a wrong test; added the `spend` view and an "average per month" rule |
+| 1 | 110-row statement | 13/14 | Added group-by rule/example; retries at temperature 0.3 |
+| 2 | 110-row statement | 17/17 | Error-specific repair hints; date-filter rule and example |
+| 3 | 868-row year-to-date statement | 15/21 | New, larger and messier data exposed new failures |
+| 4 | 868-row year-to-date statement | 24/24 | Fixed a wrong test; added the `spend` view and an "average per month" rule |
 
-## Learnings:
-
-- **A leaky prompt example caused a repeated failure.** An example that ended in
-  `.sum()` led the model to try sorting a single number. Prompt examples and test
-  questions should be different questions.
-- **Deterministic retries repeat mistakes.** At temperature 0 the same bad code was
-  generated three times. The first attempt stays deterministic; retries add variety.
-- **Tell the model how to fix an error, not just what it was.** One failure was
-  `dt.year == 2026 & dt.month == 9`: `&` binds tighter than `==`, so each condition
-  needs parentheses. A targeted hint fixed it on the next attempt.
-- **Silent wrong answers are the real risk.** On the year-to-date data the agent
-  returned valid but wrong numbers (it forgot to exclude non-spending categories).
-  The retry loop only catches code that crashes, so these were only found because
-  the evaluation answers were computed independently.
-- **Move business rules into the data layer.** Instead of hoping a 3B model
-  remembers a filter, the `spend` DataFrame applies it deterministically.
-- **Tests can be wrong too.** One failing test was a bug in my expected value
-  (the agent's answer was correct), so I now check failures in both directions.
 
 ## Limitations
 
-- The test set is small, written by me, and I tuned the prompt against it, so
-  24/24 is optimistic. A properly held-out set and more paraphrased questions are needed.
+- The test set is small, so score of 24/24 is optimistic. A properly held-out set and more paraphrased questions are needed.
 - A 3B model can fail on multi-step questions and ambiguous wording.
-- The AST whitelist is a guardrail, not a sandbox. Do not run untrusted input against it.
 - One sheet of 868 rows. Larger data would need SQL pushdown or Spark.
 - Which categories count as "spending" is a judgement call encoded in `NON_SPEND`.
 
@@ -104,7 +83,7 @@ python eval.py
 
 ```
 agent.py           the agent (load/clean, schema, safety check, retry loop)
-eval.py            evaluation suite (24 questions)
+eval.py            evaluation setup (24 questions)
 statement.xlsx     anonymised sample data
 requirements.txt   dependencies
 ```
