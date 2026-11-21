@@ -8,22 +8,22 @@ laptop through [Ollama](https://ollama.com), so the data never leaves the machin
 ## How it works
 
 1. **Load and clean** the workbook: parse dates, rename columns, normalise
-   category labels to uppercase (64 raw labels become 45), and add a `month`
-   column (e.g. `2026-03`) that is easy for a small model to group on.
-2. **Describe the schema** to the model: column types, allowed values of
+   category labels to uppercase, and add a `month` column (e.g. `2026-03`)
+   that is easy for a small model to group on.
+3. **Describe the schema** to the model: column types, allowed values of
    low-cardinality text columns, the date range and two sample rows. The model never
    sees the full data.
-3. **Give it a curated view.** Business rules live in the data layer, not only in
+4. **Give it a curated view.** Business rules live in the data layer, not only in
    the prompt: the agent gets `df` (every withdrawal) and `spend` (the same data
    without non-spending categories such as investments and loan repayments).
-4. **Generate code** with a small local model (`qwen2.5-coder:3b`), guided by a
+5. **Generate pandas code** with a small local model (`qwen2.5-coder:3b`), guided by a
    few worked examples and rules in the system prompt.
-5. **Check the code** with an AST whitelist before running it: only pandas/numpy
+6. **Check the pandas code** with an AST whitelist before running it: only pandas/numpy
    imports; no `open`, `eval`, `exec`, dunder attributes, or file read/write calls.
-6. **Execute**: if the code fails, the error plus an error-specific repair hint is
-   sent back to the model (retries use a little temperature so they can vary).
-7. **Summarise** only the computed result, so figures in the answer come from the
-   data. The generated code is always shown for auditability.
+7. **Execute**: if the pandas code fails, the error plus an error-specific repair hint is
+   sent back to the LLM (retries use a little temperature so they can vary).
+8. **Summarise** only the computed result, so figures in the answer come from the
+   data. The generated code is shown for review.
 
 ## Quick start
 
